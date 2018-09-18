@@ -43,33 +43,14 @@ class Token:
         return False
     """
 
+
+class Expression:
+    def __init__(self, antecedent, consequent):
+        self.antecedent = ""
+        self.consequent = ""
+
+
 grammar = {
-    "A": Token(TokenType.SYMBOL, "A"),
-    "B": Token(TokenType.SYMBOL, "B"),
-    "C": Token(TokenType.SYMBOL, "C"),
-    "D": Token(TokenType.SYMBOL, "D"),
-    "E": Token(TokenType.SYMBOL, "E"),
-    "F": Token(TokenType.SYMBOL, "F"),
-    "G": Token(TokenType.SYMBOL, "G"),
-    "H": Token(TokenType.SYMBOL, "H"),
-    "I": Token(TokenType.SYMBOL, "I"),
-    "J": Token(TokenType.SYMBOL, "J"),
-    "K": Token(TokenType.SYMBOL, "K"),
-    "L": Token(TokenType.SYMBOL, "L"),
-    "M": Token(TokenType.SYMBOL, "M"),
-    "N": Token(TokenType.SYMBOL, "N"),
-    "O": Token(TokenType.SYMBOL, "O"),
-    "P": Token(TokenType.SYMBOL, "P"),
-    "Q": Token(TokenType.SYMBOL, "Q"),
-    "R": Token(TokenType.SYMBOL, "R"),
-    "S": Token(TokenType.SYMBOL, "S"),
-    "T": Token(TokenType.SYMBOL, "T"),
-    "U": Token(TokenType.SYMBOL, "U"),
-    "V": Token(TokenType.SYMBOL, "V"),
-    "W": Token(TokenType.SYMBOL, "W"),
-    "X": Token(TokenType.SYMBOL, "X"),
-    "Y": Token(TokenType.SYMBOL, "Y"),
-    "Z": Token(TokenType.SYMBOL, "Z"),
     "(": Token(TokenType.LEFT_PAREN),
     ")": Token(TokenType.RIGHT_PAREN),
     "!": Token(TokenType.NOT),
@@ -85,7 +66,7 @@ grammar = {
 
 
 def lex(file):
-    tokens = deque([])
+    tokens = deque()
     for line in file.readlines():
         line = line.strip()
         if line.startswith("#"):
@@ -99,6 +80,9 @@ def lex(file):
             tmp += c
             if c == "=" and line and line[0] == ">":
                 continue
+            elif tmp.isalpha():
+                tokens.append(Token(TokenType.SYMBOL, tmp))
+                tmp = ""
             elif tmp in grammar:
                 tokens.append(grammar[tmp])
                 tmp = ""
@@ -107,6 +91,10 @@ def lex(file):
 
 
 def Expressify(tokens):
+    pass
+
+
+def toRPN(tokens):
     exps = []
     ops = []
 
@@ -122,7 +110,7 @@ def Expressify(tokens):
                 ops.append(tmp)
             elif tmp.type == TokenType.RIGHT_PAREN:
                 print(ops)
-                while ops and ops[0].type != TokenType.LEFT_PAREN:
+                while ops and ops[-1].type != TokenType.LEFT_PAREN:
                     output.append(ops.pop())
                 ops.pop()
         while ops:
@@ -151,8 +139,8 @@ def main(args):
             exit("Error opening file.")
     tokens = lex(source)
     print(" " + " ".join(map(str, tokens)))
-    exps = Expressify(tokens)
-    print("\n".join(map(str, exps)))
+    #exps = Expressify(tokens)
+    #print("\n".join(map(str, exps)))
 
 
 if __name__ == "__main__":
