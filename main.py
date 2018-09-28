@@ -3,6 +3,7 @@
 import re
 import sys
 import math
+import itertools
 from collections import deque
 from enum import IntEnum, auto
 
@@ -36,9 +37,10 @@ class Token:
 
     def __repr__(self):
         return str(self)
-    """
+
     def __eq__(self, other):
-        return False
+        return self.type == other.type
+    """
     def __lt__(self, other):
         return False
     """
@@ -46,8 +48,8 @@ class Token:
 
 class Expression:
     def __init__(self, antecedent, consequent):
-        self.antecedent = ""
-        self.consequent = ""
+        self.antecedent = antecedent
+        self.consequent = consequent
 
 
 grammar = {
@@ -90,8 +92,18 @@ def lex(file):
     return tokens
 
 
-def Expressify(tokens):
-    pass
+def to_expressions(tokens):
+    exps = deque()
+    tmp = []
+    while tokens:
+        if tokens[0].type == TokenType.BREAK:
+            tokens.popleft()
+            if len(tmp) > 0:
+                exps.append(tmp)
+            tmp = []
+        else:
+            tmp.append(tokens.popleft())
+    return exps
 
 
 def toRPN(tokens):
@@ -120,6 +132,39 @@ def toRPN(tokens):
     return exps
 
 
+def parse(exps):
+    errors = []
+
+    # Rules
+    rules = list(filter(lambda x: not Token(TokenType.INIT) in x and not Token(TokenType.QUERY) in x, exps))
+
+    # Build state
+    state = {}
+    symbols = map(lambda l: filter(lambda x: x == Token(TokenType.SYMBOL), l), exps)
+    symbols = list(itertools.chain.from_iterable(symbols))
+    for x in symbols:
+        state[x.symbol] = False
+
+    # Get inital facts
+    fact_exps = list(filter(lambda x: Token(TokenType.INIT) in x, exps))
+    if len(fact_exps) > 1:
+        errors.append("Multiple facts error")
+    elif len(fact_exps) == 1:
+        for x in fact_exps[0]:
+            if x.type == TokenType.SYMBOL:
+                state[x.symbol] = True
+
+    # Get inital query
+    query = []
+    query_exps = list(filter(lambda x: Token(TokenType.QUERY) in x, exps))
+    if len(query_exps) > 1:
+        errors.append("Multiple query error")
+    elif len(query_exps) == 1:
+        query = list(filter(lambda x: x == Token(TokenType.SYMBOL), query_exps[0]))
+
+    return (rules, state, query, errors)
+
+
 def main(args):
     verbose = False
     if "-v" in args or "--verbose" in args[1:]:
@@ -137,10 +182,11 @@ def main(args):
             source = open(source_name)
         except OSError:
             exit("Error opening file.")
-    tokens = lex(source)
-    print(" " + " ".join(map(str, tokens)))
-    #exps = Expressify(tokens)
-    #print("\n".join(map(str, exps)))
+    rules, state, query, errors = parse(to_expressions(lex(source)))
+    print("Rules\n" + "\n".join(map(str, rules)), "\n")
+    print(state, "\n")
+    print(query, "\n")
+    print(errors)
 
 
 if __name__ == "__main__":
