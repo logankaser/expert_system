@@ -183,10 +183,11 @@ def main(args):
         except OSError:
             exit("Error opening file.")
     rules, state, query, errors = parse(to_expressions(lex(source)))
-    print("Rules\n" + "\n".join(map(str, rules)), "\n")
-    print(state, "\n")
-    print(query, "\n")
-    print(errors)
+    print("Rules:\n" + "\n".join(map(str, rules)), "\n")
+    print("Inital Facts:\n" + str(state), "\n")
+    print("Query: " + ",".join(map(lambda x: x.symbol, query)))
+    if errors:
+        print(errors)
 
 
 if __name__ == "__main__":
