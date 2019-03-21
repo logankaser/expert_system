@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Expert System."""
 
 import sys
 from lark import Lark, Transformer, UnexpectedInput
@@ -38,20 +39,24 @@ RULE_GRAPH = defaultdict(lambda: [])
 FACTS = {}
 QUERY = deque()
 
+
 class TraverseAST(Transformer):
     """Read inital state and bould graph."""
 
     def fact(self, items):
+        """Record facts."""
         global FACTS
         for fact in items:
             FACTS[fact.value] = True
 
     def query(self, items):
+        """Store queries."""
         global QUERY
         for query in items:
             QUERY.append(query.value)
 
     def rule(self, items):
+        """Build rule graph."""
         global RULE_GRAPH
         if items[1].type == "IMPLIES":
             pass
@@ -64,6 +69,7 @@ parser = Lark(grammar, start="expressions", parser="lalr")
 
 
 def eval_node(root):
+    """Traverse the AST tree evalulating the truth of the node."""
     if root.data == "value":
         return backwards_chain(root.children[0].value)
     elif root.data == "and":
@@ -78,6 +84,7 @@ def eval_node(root):
     elif root.data == "not":
         return not eval_node(root.children[0])
     else:
+        # Should never happen, means the AST has changed.
         assert(False)
 
 
@@ -109,8 +116,8 @@ if __name__ == "__main__":
             print(tree.pretty())
             tree = TraverseAST().transform(tree)
         except UnexpectedInput as e:
-           print(f"Syntax error at line {e.line}, column {e.column}")
-           print(e.get_context(source, 80))
+            print(f"Syntax error at line {e.line}, column {e.column}")
+            print(e.get_context(source, 80))
     while QUERY:
         goal = QUERY.pop()
         res = backwards_chain(goal)
