@@ -34,7 +34,7 @@ GRAMMAR = r"""
 
     rule: statement (IMPLIES | IFF) statement _NEWLINE?
 
-    fact: "=" SYMBOL+ _NEWLINE?
+    fact: "=" SYMBOL* _NEWLINE?
     query: "?" SYMBOL+ _NEWLINE?
 
     %import common.WS_INLINE
@@ -167,11 +167,16 @@ if __name__ == "__main__":
         plt.show()
         exit(0)
     QUERY.clear()
+    old_facts = FACTS.copy()
     while True:
         line = input("eps: ").upper()
         if line == "QUIT" or line == "EXIT":
             exit(0)
+        if line == "RESET":
+            FACTS = old_facts.copy()
+            continue
         falses = [key for key, value in FACTS.items() if value is False]
+        # Clear False values from cache in case they are now True
         for key in falses:
             del FACTS[key]
         try:
