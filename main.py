@@ -61,15 +61,20 @@ class TraverseAST(Visitor):
         """Build rule graph."""
         rule = rule_node.children
         global RULE_GRAPH
-        if rule[1].type == "IMPLIES":
-            conclusion = rule[2]
-            if conclusion.data == "value":
-                RULE_GRAPH[conclusion.children[0].value].append(rule[0])
-            elif conclusion.data == "and":
-               RULE_GRAPH[conclusion.children[0].children[0].value].append(rule[0])
-               RULE_GRAPH[conclusion.children[1].children[0].value].append(rule[0])
-        elif rule[1].type == "IFF":
-            pass
+        try:
+            if rule[1].type == "IMPLIES":
+                conclusion = rule[2]
+                if conclusion.data == "value":
+                    RULE_GRAPH[conclusion.children[0].value].append(rule[0])
+                elif conclusion.data == "and":
+                   RULE_GRAPH[conclusion.children[0].children[0].value].append(rule[0])
+                   RULE_GRAPH[conclusion.children[1].children[0].value].append(rule[0])
+                else:
+                    raise
+            elif rule[1].type == "IFF":
+                raise
+        except:
+            print("Unsupported conclusion type, skipping..")
 
 
 def eval_node(node):
@@ -89,7 +94,7 @@ def eval_node(node):
         return not eval_node(node.children[0])
     else:
         # Should never happen, means the AST has changed.
-        assert(False)
+        assert False
 
 
 def backwards_chain(goal):
@@ -119,24 +124,38 @@ if __name__ == "__main__":
         try:
             parser = Lark(GRAMMAR, start="expressions", parser="lalr")
             tree = parser.parse(source)
-            #print(tree.pretty())
+            if "-p" in sys.argv[2:]:
+                print("--- AST ---")
+                sys.stdout.write(tree.pretty())
+                sys.stdout.flush()
+                print("-----------\n")
             TraverseAST().visit(tree)
         except UnexpectedInput as e:
             print(f"Syntax error at line {e.line}, column {e.column}")
             print(e.get_context(source, 80))
 
-    if not "-i" in sys.argv[2:]:
+    if "-i" not in sys.argv[2:]:
         while QUERY:
             goal = QUERY.popleft()
             res = backwards_chain(goal)
             print(f"{goal}: {res}")
-    else:
-        while True:
-            goal = input("Query: ").upper()
-            if len(goal) != 1 or not goal.isalpha():
-                continue
-            falses = [key for key, value in FACTS.items() if value is False]
-            for key in falses:
-                del FACTS[key]
+        exit(0)
+    QUERY.clear()
+    while True:
+        line = input("eps: ").upper()
+        if line == "QUIT" or line == "EXIT":
+            exit(0)
+        falses = [key for key, value in FACTS.items() if value is False]
+        for key in falses:
+            del FACTS[key]
+        try:
+            parser = Lark(GRAMMAR, start="expressions", parser="lalr")
+            tree = parser.parse(line)
+            TraverseAST().visit(tree)
+        except UnexpectedInput as e:
+            print(f"Syntax error at line {e.line}, column {e.column}")
+            print(e.get_context(line, 80))
+        while QUERY:
+            goal = QUERY.popleft()
             res = backwards_chain(goal)
             print(f"{goal}: {res}")
