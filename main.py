@@ -2,35 +2,37 @@
 """Expert System."""
 
 import sys
+import networkx as nx
+import matplotlib.pyplot as plt
+import warnings
+import matplotlib.cbook
+warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
+
 from lark import Lark, Visitor, UnexpectedInput
 from collections import deque, defaultdict
+
+graph_colors = []
 
 GRAMMAR = r"""
     IMPLIES: "=>"
     IFF: "<=>"
     SYMBOL: "A".."Z"
     _NEWLINE: /\r?\n/+
-
     ?expressions: (rule | fact | query)*
-
     and: statement "+" statement
     or: statement "|" statement
     xor: statement "^" statement
     not: "!" statement
     value: SYMBOL
-
     ?statement: not
               | "(" statement ")"
               | value
               | and
               | or
               | xor
-
     rule: statement (IMPLIES | IFF) statement _NEWLINE?
-
     fact: "=" SYMBOL* _NEWLINE?
     query: "?" SYMBOL+ _NEWLINE?
-
     %import common.WS_INLINE
     %ignore WS_INLINE
     _COMMENT: /#.+/ _NEWLINE?
@@ -76,28 +78,42 @@ class TraverseAST(Visitor):
         except:
             print("Unsupported conclusion type, skipping..")
 
+def draw_graph(rule, graph):
+    if rule.data == "value":
+        return rule.children[0].value
+    elif rule.data == "and":
+        a, b = rule.children
+        return draw_graph(a, graph) + " + " + draw_graph(b, graph)
+    elif rule.data == "or":
+        a, b = rule.children
+        return draw_graph(a, graph) + " | " + draw_graph(b, graph)
+    elif rule.data == "xor":
+        a, b = rule.children
+        return draw_graph(a, graph) + " ^ " + draw_graph(b, graph)
+    elif rule.data == "not":
+        return "!" + draw_graph(rule.children[0], graph)
 
-def eval_node(node):
+def eval_node(node, graph):
     """Traverse the AST tree evalulating the truth of the node."""
     if node.data == "value":
-        return backwards_chain(node.children[0].value)
+        return backwards_chain(node.children[0].value, graph)
     elif node.data == "and":
         a, b = node.children
-        return eval_node(a) and eval_node(b)
+        return eval_node(a, graph) and eval_node(b, graph)
     elif node.data == "or":
         a, b = node.children
-        return eval_node(a) or eval_node(b)
+        return eval_node(a, graph) or eval_node(b, graph)
     elif node.data == "xor":
         a, b = node.children
-        return eval_node(a) != eval_node(b)
+        return eval_node(a, graph) != eval_node(b, graph)
     elif node.data == "not":
-        return not eval_node(node.children[0])
+        return not eval_node(node.children[0], graph)
     else:
         # Should never happen, means the AST has changed.
         assert False
 
 
-def backwards_chain(goal):
+def backwards_chain(goal, graph):
     """Follow goals in consequence -> premise order i.e backwards."""
     # If we already know the value then return it.
     # Also prevents looping logic.
@@ -109,10 +125,14 @@ def backwards_chain(goal):
     # value starts at False
     FACTS[goal] = False
     for rule in RULE_GRAPH[goal]:
-        if eval_node(rule):
+        if eval_node(rule, graph):
+            graph_result = draw_graph(rule, graph)
+            graph.add_edge(graph_result, goal)
+            for c in graph_result:
+                if c.isalpha():
+                    graph.add_edge(c, graph_result)
             FACTS[goal] = True
             break
-
     return FACTS[goal]
 
 
@@ -133,12 +153,25 @@ if __name__ == "__main__":
         except UnexpectedInput as e:
             print(f"Syntax error at line {e.line}, column {e.column}")
             print(e.get_context(source, 80))
-
+    graph = nx.DiGraph()
     if "-i" not in sys.argv[2:]:
         while QUERY:
             goal = QUERY.popleft()
-            res = backwards_chain(goal)
+            res = backwards_chain(goal, graph)
             print(f"{goal}: {res}")
+            for node in graph:
+                if len(node) == 1:
+                    try:
+                        if FACTS[node] == True:
+                            graph_colors.append('g')
+                        else:
+                            graph_colors.append('r')
+                    except:
+                        graph_colors.append('r')
+                else:
+                    graph_colors.append('b')
+            nx.draw(graph, with_labels = True, arrows = True, node_color=graph_colors, edge_color='b')
+            plt.show()
         exit(0)
     QUERY.clear()
     old_facts = FACTS.copy()
@@ -162,5 +195,5 @@ if __name__ == "__main__":
             print(e.get_context(line, 80))
         while QUERY:
             goal = QUERY.popleft()
-            res = backwards_chain(goal)
-            print(f"{goal}: {res}")
+            res = backwards_chain(goal, graph)
+print(f"{goal}: {res}")
