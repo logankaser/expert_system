@@ -131,7 +131,7 @@ def backwards_chain(goal, graph):
     for rule in RULE_GRAPH[goal]:
         if eval_node(rule, graph):
             graph_result = draw_graph(rule, graph)
-            graph.add_edge(goal, graph_result)
+            graph.add_edge(graph_result, goal)
             for c in graph_result:
                 if c.isalpha():
                     graph.add_edge(c, graph_result)
@@ -157,13 +157,13 @@ if __name__ == "__main__":
         except UnexpectedInput as e:
             print(f"Syntax error at line {e.line}, column {e.column}")
             print(e.get_context(source, 80))
-    graph = nx.Graph()
+    graph = nx.DiGraph()
     if "-i" not in sys.argv[2:]:
         while QUERY:
             goal = QUERY.popleft()
             res = backwards_chain(goal, graph)
             print(f"{goal}: {res}")
-        nx.draw(graph, with_labels = True, nodecolor='r', edge_color='b')
+        nx.draw(graph, with_labels = True, arrows = True, nodecolor='r', edge_color='b')
         plt.show()
         exit(0)
     QUERY.clear()
