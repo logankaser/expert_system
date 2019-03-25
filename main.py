@@ -2,16 +2,21 @@
 """Expert System."""
 
 import sys
-import networkx as nx
-import matplotlib.pyplot as plt
-import warnings
-import matplotlib.cbook
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
-
 from lark import Lark, Visitor, UnexpectedInput
 from collections import deque, defaultdict
 
-graph_colors = []
+if "-g" in sys.argv:
+    from sys import platform as sys_pf
+    if sys_pf == 'darwin':
+       import matplotlib
+       matplotlib.use("TkAgg")
+    import networkx as nx
+    import matplotlib.pyplot as plt
+    import warnings
+    import matplotlib.cbook
+    warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
+
+GRAPH_COLORS = []
 
 GRAMMAR = r"""
     IMPLIES: "=>"
@@ -154,7 +159,10 @@ if __name__ == "__main__":
         except UnexpectedInput as e:
             print(f"Syntax error at line {e.line}, column {e.column}")
             print(e.get_context(source, 80))
-    graph = nx.DiGraph()
+
+    graph = None
+    if "-g" in sys.argv[2:]:
+        graph = nx.DiGraph()
     if "-i" not in sys.argv[2:]:
         while QUERY:
             goal = QUERY.popleft()
@@ -162,17 +170,13 @@ if __name__ == "__main__":
             print(f"{goal}: {res}")
         if "-g" in sys.argv[2:]:
             for node in graph:
-                if len(node) == 1:
-                    try:
-                        if FACTS[node] == True:
-                            graph_colors.append('g')
-                        else:
-                            graph_colors.append('r')
-                    except:
-                        graph_colors.append('r')
+                if len(node) != 1:
+                    GRAPH_COLORS.append("b")
+                elif node in FACTS and FACTS[node]:
+                    GRAPH_COLORS.append("g")
                 else:
-                    graph_colors.append('b')
-            nx.draw(graph, with_labels = True, arrows = True, node_color=graph_colors, edge_color='b')
+                    GRAPH_COLORS.append("r")
+            nx.draw(graph, with_labels=True, arrows=True, node_color=GRAPH_COLORS, edge_color="b")
             plt.show()
         exit(0)
     QUERY.clear()
