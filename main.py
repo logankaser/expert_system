@@ -49,6 +49,20 @@ FACTS = {}
 QUERY = deque()
 
 
+def iter_and(node):
+    """Traverse and values of conclusion and return them as a list."""
+    bfs = deque([node])
+    and_values = []
+    while bfs:
+        current = bfs.popleft()
+        if current.data == "value":
+            and_values.append(current.children[0].value)
+        elif current.data == "and":
+            bfs.append(current.children[0])
+            bfs.append(current.children[1])
+    return and_values
+
+
 class TraverseAST(Visitor):
     """Read inital state and build rule graph."""
 
@@ -68,20 +82,17 @@ class TraverseAST(Visitor):
         """Build rule graph."""
         rule = rule_node.children
         global RULE_GRAPH
-        try:
-            if rule[1].type == "IMPLIES":
-                conclusion = rule[2]
-                if conclusion.data == "value":
-                    RULE_GRAPH[conclusion.children[0].value].append(rule[0])
-                elif conclusion.data == "and":
-                   RULE_GRAPH[conclusion.children[0].children[0].value].append(rule[0])
-                   RULE_GRAPH[conclusion.children[1].children[0].value].append(rule[0])
-                else:
-                    raise
-            elif rule[1].type == "IFF":
-                raise
-        except:
-            print("Unsupported conclusion type, skipping..")
+        if rule[1].type == "IMPLIES":
+            conclusion = rule[2]
+            for v in iter_and(conclusion):
+                RULE_GRAPH[v].append(rule[0])
+        elif rule[1].type == "IFF":
+            statement = rule[0]
+            conclusion = rule[2]
+            for v in iter_and(conclusion):
+                RULE_GRAPH[v].append(statement)
+            for v in iter_and(statement):
+                RULE_GRAPH[v].append(conclusion)
 
 def draw_graph(rule, graph):
     if rule.data == "value":
