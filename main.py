@@ -126,11 +126,12 @@ def backwards_chain(goal, graph):
     FACTS[goal] = False
     for rule in RULE_GRAPH[goal]:
         if eval_node(rule, graph):
-            graph_result = draw_graph(rule, graph)
-            graph.add_edge(graph_result, goal)
-            for c in graph_result:
-                if c.isalpha():
-                    graph.add_edge(c, graph_result)
+            if "-g" in sys.argv[2:]:
+                graph_result = draw_graph(rule, graph)
+                graph.add_edge(graph_result, goal)
+                for c in graph_result:
+                    if c.isalpha():
+                        graph.add_edge(c, graph_result)
             FACTS[goal] = True
             break
     return FACTS[goal]
@@ -159,6 +160,7 @@ if __name__ == "__main__":
             goal = QUERY.popleft()
             res = backwards_chain(goal, graph)
             print(f"{goal}: {res}")
+        if "-g" in sys.argv[2:]:
             for node in graph:
                 if len(node) == 1:
                     try:
