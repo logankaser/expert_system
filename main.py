@@ -213,4 +213,4 @@ if __name__ == "__main__":
         while QUERY:
             goal = QUERY.popleft()
             res = backwards_chain(goal, graph)
-print(f"{goal}: {res}")
+            print(f"{goal}: {res}")
